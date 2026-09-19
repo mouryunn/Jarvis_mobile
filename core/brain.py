@@ -18,7 +18,35 @@ class JarvisBrain:
     def __init__(self):
         self.api_key = settings.gemini_api_key
         self.model_name = settings.gemini_model
+        self.discovered_models: List[str] = []
         self.conversation_history: List[Dict[str, Any]] = []
+
+    def _discover_available_models(self) -> List[str]:
+        """Query Google's ListModels endpoint to get the exact models available for this API key."""
+        if not self.api_key:
+            return []
+        try:
+            headers = {"x-goog-api-key": self.api_key}
+            url = f"https://generativelanguage.googleapis.com/v1beta/models?key={self.api_key}"
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                found = []
+                for m in data.get("models", []):
+                    methods = m.get("supportedGenerationMethods", [])
+                    if "generateContent" in methods:
+                        clean_name = m.get("name", "").replace("models/", "")
+                        found.append(clean_name)
+                
+                # Sort to prefer flash models for fast mobile responsiveness
+                found.sort(key=lambda x: (0 if "flash" in x.lower() else 1, 0 if "2" in x else 1))
+                logger.info(f"Discovered {len(found)} active Gemini models: {found[:5]}")
+                return found
+            else:
+                logger.warning(f"ListModels API returned status {res.status_code}: {res.text[:200]}")
+        except Exception as e:
+            logger.error(f"Error querying ListModels: {e}")
+        return []
 
     def ask(self, user_prompt: str, image_path: Optional[str] = None) -> Dict[str, Any]:
         """Process a user query, handle tool calling, and return spoken response."""
@@ -48,12 +76,17 @@ class JarvisBrain:
         if len(self.conversation_history) > 12:
             self.conversation_history = self.conversation_history[-12:]
 
-        candidate_models = [
-            self.model_name,
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro"
-        ]
+        # Discover active models if not already done
+        if not self.discovered_models:
+            self.discovered_models = self._discover_available_models()
+
+        # Build prioritized list of models to try
+        candidate_models = []
+        if self.model_name:
+            candidate_models.append(self.model_name)
+        candidate_models.extend(self.discovered_models)
+        candidate_models.extend(["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"])
+
         # Deduplicate preserving order
         models_to_try = []
         for m in candidate_models:
@@ -62,10 +95,14 @@ class JarvisBrain:
 
         executed_actions = []
         resp = None
+        working_model = None
 
         for model in models_to_try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
-            headers = {"Content-Type": "application/json"}
+            headers = {
+                "Content-Type": "application/json",
+                "x-goog-api-key": self.api_key
+            }
             payload = {
                 "system_instruction": {
                     "parts": [{"text": settings.system_prompt}]
@@ -80,18 +117,20 @@ class JarvisBrain:
                     logger.warning(f"Model '{model}' returned 404. Trying next supported model...")
                     continue
                 resp = r
-                self.model_name = model  # Remember working model
+                working_model = model
+                self.model_name = model
                 break
             except Exception as e:
                 logger.error(f"Request failed for model {model}: {e}")
 
         if not resp:
-            return self._fallback_action_handler(user_prompt, "All Gemini models returned 404")
+            return self._fallback_action_handler(user_prompt, "Unable to reach Gemini models. Please check your API key.")
 
         try:
             if resp.status_code != 200:
                 logger.error(f"Gemini API returned status {resp.status_code}: {resp.text}")
-                return self._fallback_action_handler(user_prompt, f"Status {resp.status_code}")
+                err_details = resp.json().get("error", {}).get("message", f"Status {resp.status_code}")
+                return self._fallback_action_handler(user_prompt, err_details)
 
             data = resp.json()
             candidates = data.get("candidates", [])
@@ -137,13 +176,19 @@ class JarvisBrain:
                 })
 
                 # Follow up request to generate final spoken answer
+                followup_url = f"https://generativelanguage.googleapis.com/v1beta/models/{working_model}:generateContent?key={self.api_key}"
                 followup_payload = {
                     "system_instruction": {"parts": [{"text": settings.system_prompt}]},
                     "contents": self.conversation_history,
                     "tools": [{"function_declarations": TOOL_DEFINITIONS}]
                 }
 
-                followup_resp = requests.post(url, headers=headers, json=followup_payload, timeout=25)
+                followup_headers = {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": self.api_key
+                }
+
+                followup_resp = requests.post(followup_url, headers=followup_headers, json=followup_payload, timeout=25)
                 if followup_resp.status_code == 200:
                     f_data = followup_resp.json()
                     f_candidates = f_data.get("candidates", [])
@@ -162,11 +207,11 @@ class JarvisBrain:
             }
 
         except Exception as e:
-            logger.error(f"Gemini REST error: {e}", exc_info=True)
+            logger.error(f"Gemini processing error: {e}", exc_info=True)
             return self._fallback_action_handler(user_prompt, str(e))
 
     def _fallback_action_handler(self, prompt: str, error_msg: str) -> Dict[str, Any]:
-        """Simple rule-based fallback when Gemini API encounters network or key issues."""
+        """Simple rule-based fallback when Gemini API encounters issues."""
         p = prompt.lower()
         actions = []
 
