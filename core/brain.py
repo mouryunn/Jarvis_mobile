@@ -80,12 +80,12 @@ class JarvisBrain:
         if not self.discovered_models:
             self.discovered_models = self._discover_available_models()
 
-        # Build prioritized list of models to try
+        # Build prioritized list of models to try (user-specified model first)
         candidate_models = []
-        if self.discovered_models:
-            candidate_models.extend(self.discovered_models)
         if self.model_name:
             candidate_models.append(self.model_name)
+        if self.discovered_models:
+            candidate_models.extend(self.discovered_models)
         candidate_models.extend([
             "gemini-2.5-flash",
             "gemini-3.8-live",

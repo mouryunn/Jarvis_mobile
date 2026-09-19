@@ -61,11 +61,16 @@ try:
     print("\n[*] Step 3: Testing live generation with top candidates...")
     working_model = None
 
-    # Prioritize flash / live models
+    # Prioritize Gemini 3 Flash Live models
+    filter_word = sys.argv[1].lower() if len(sys.argv) > 1 else ""
+
     test_queue = sorted(usable_models, key=lambda x: (
-        0 if "flash" in x.lower() else 1,
-        0 if "3" in x else 1,
-        0 if "2" in x else 1
+        0 if filter_word and filter_word in x.lower() else 1,
+        0 if "3" in x.lower() and "live" in x.lower() and "flash" in x.lower() else 1,
+        0 if "live" in x.lower() and "flash" in x.lower() else 1,
+        0 if "live" in x.lower() else 1,
+        0 if "3" in x.lower() and "flash" in x.lower() else 1,
+        0 if "flash" in x.lower() else 1
     ))
 
     for model_id in test_queue[:6]:
