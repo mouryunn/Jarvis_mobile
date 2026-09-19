@@ -2,10 +2,11 @@ import os
 import json
 import logging
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
-from pydantic import BaseModel
+from starlette.applications import Starlette
+from starlette.responses import FileResponse, JSONResponse
+from starlette.routing import Route, Mount, WebSocketRoute
+from starlette.staticfiles import StaticFiles
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from core.config import settings
 from core.brain import brain
@@ -16,27 +17,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger("jarvis.server")
 
 BASE_DIR = Path(__file__).resolve().parent
-app = FastAPI(title="JARVIS Mobile", description="Mark-LIV Mobile Assistant for Android Termux")
 
-# Mount static files
-static_dir = BASE_DIR / "hud" / "static"
-app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-
-class ActionRequest(BaseModel):
-    tool: str
-    args: dict = {}
-
-@app.get("/", response_class=HTMLResponse)
-async def index():
+async def index(request):
     """Serve the holographic mobile Web HUD."""
     template_path = BASE_DIR / "hud" / "templates" / "index.html"
     return FileResponse(template_path)
 
-@app.get("/api/status")
-async def get_status():
+async def get_status(request):
     """Get system health, battery, and execution environment."""
     battery = termux_api.get_battery_status()
-    return {
+    return JSONResponse({
         "status": "online",
         "assistant": settings.assistant_name,
         "model": settings.gemini_model,
@@ -45,21 +35,25 @@ async def get_status():
         "has_adb": settings.has_adb,
         "simulation_mode": settings.simulation_mode,
         "battery": battery
-    }
+    })
 
-@app.post("/api/action")
-async def trigger_action(req: ActionRequest):
+async def trigger_action(request):
     """Directly trigger a hardware action via REST."""
-    res = execute_tool(req.tool, req.args)
-    return {"tool": req.tool, "result": res}
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    tool = data.get("tool", "")
+    args = data.get("args", {})
+    res = execute_tool(tool, args)
+    return JSONResponse({"tool": tool, "result": res})
 
-@app.websocket("/ws/jarvis")
 async def websocket_endpoint(websocket: WebSocket):
     """Real-time bi-directional channel between Web HUD and Jarvis brain."""
     await websocket.accept()
     logger.info("New WebSocket client connected to JARVIS Mobile.")
 
-    # Send initial status
+    # Send initial battery status
     battery = termux_api.get_battery_status()
     await websocket.send_json({
         "type": "battery",
@@ -102,3 +96,15 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.info("WebSocket client disconnected.")
     except Exception as e:
         logger.error(f"WebSocket session error: {e}")
+
+static_dir = BASE_DIR / "hud" / "static"
+
+routes = [
+    Route("/", index, methods=["GET"]),
+    Route("/api/status", get_status, methods=["GET"]),
+    Route("/api/action", trigger_action, methods=["POST"]),
+    WebSocketRoute("/ws/jarvis", websocket_endpoint),
+    Mount("/static", StaticFiles(directory=str(static_dir)), name="static"),
+]
+
+app = Starlette(routes=routes)

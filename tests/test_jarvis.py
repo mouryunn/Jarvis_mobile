@@ -89,8 +89,8 @@ def test_brain_offline():
     print("[PASS] Brain response passed.")
 
 def test_server_routes():
-    print("Testing FastAPI server endpoints...")
-    from fastapi.testclient import TestClient
+    print("Testing Starlette server endpoints...")
+    from starlette.testclient import TestClient
     from server import app
 
     client = TestClient(app)

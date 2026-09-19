@@ -1,21 +1,15 @@
 # ── JARVIS-MOBILE (Android Termux Edition) Dependencies ──────────────────
-# Lightweight, pure-Python & ARM-compatible packages for Android Termux & PC testing
+# 100% Pure Python - Zero Rust or C compilation required!
 
-# AI & LLM (Google Gemini SDK)
-google-genai>=1.0.0
-google-generativeai>=0.8.0
-
-# Web Framework & Real-time WebSockets (Mobile Web HUD)
-fastapi>=0.110.0
-uvicorn[standard]>=0.28.0
+# Web Server & Real-time WebSockets (Mobile Web HUD)
+starlette>=0.36.0
+uvicorn>=0.27.0
 websockets>=12.0
-jinja2>=3.1.3
 
 # Terminal UI
 rich>=13.7.0
 
-# Utilities
-python-dotenv>=1.0.1
+# Network & Utilities
 requests>=2.31.0
-pillow>=10.2.0
+python-dotenv>=1.0.1
 duckduckgo-search>=6.0.0

@@ -24,9 +24,9 @@ pkg install -y python git termux-api android-tools clang libjpeg-turbo libffi op
 echo -e "\033[1;33m[*] Upgrading pip and wheel...\033[0m"
 python -m pip install --upgrade pip wheel setuptools
 
-# 4. Install Python Requirements using Pre-built Termux Wheels
-echo -e "\033[1;33m[*] Installing Python dependencies (using pre-built Termux wheels)...\033[0m"
-pip install --extra-index-url https://termux-user-repository.github.io/pypi/ --extra-index-url https://eutalix.github.io/android-pydantic-core/ -r requirements.txt
+# 4. Install Python Requirements (100% Pure Python, Zero Rust)
+echo -e "\033[1;33m[*] Installing Python dependencies...\033[0m"
+pip install -r requirements.txt
 
 # 5. Setup Environment Configuration
 if [ ! -f .env ]; then
