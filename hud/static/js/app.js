@@ -137,12 +137,21 @@ function speakAloud(text) {
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.05;
-    utterance.pitch = 0.95;
+    utterance.rate = 1.0;
+    utterance.pitch = 0.82; // Deep, calm, masculine Jarvis butler tone
 
-    // Pick best English voice if available
+    // Prefer British English / UK Male voice
     const voices = window.speechSynthesis.getVoices();
-    const jarvisVoice = voices.find(v => v.lang.startsWith("en") && (v.name.includes("Male") || v.name.includes("UK") || v.name.includes("English")));
+    let jarvisVoice = voices.find(v => 
+        (v.lang.includes("GB") || v.lang.includes("en-GB") || v.lang.includes("en_GB")) && 
+        (v.name.toLowerCase().includes("male") || !v.name.toLowerCase().includes("female"))
+    );
+    if (!jarvisVoice) {
+        jarvisVoice = voices.find(v => 
+            v.lang.startsWith("en") && 
+            (v.name.toLowerCase().includes("male") || v.name.includes("Arthur") || v.name.includes("George") || v.name.includes("Daniel") || v.name.includes("Guy"))
+        );
+    }
     if (jarvisVoice) utterance.voice = jarvisVoice;
 
     utterance.onstart = () => {
@@ -176,6 +185,8 @@ if (window.location.hostname === "0.0.0.0") {
     window.location.href = window.location.href.replace("0.0.0.0", "localhost");
 }
 
+let voiceSent = false;
+
 // ── SPEECH RECOGNITION (VOICE INPUT) ───────────────────────────────────────
 function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -191,6 +202,7 @@ function initSpeechRecognition() {
         recognition.lang = "en-US";
 
         recognition.onstart = () => {
+            voiceSent = false;
             isRecording = true;
             micBtn.className = "mic-btn active";
             micLabel.textContent = "LISTENING...";
@@ -212,10 +224,12 @@ function initSpeechRecognition() {
             if (interim) {
                 transcriptBox.innerHTML = `<strong>You:</strong> <em>${interim}</em>`;
             }
-            if (final) {
+            if (final && !voiceSent) {
+                voiceSent = true;
                 transcriptBox.innerHTML = `<strong>You:</strong> ${final}`;
                 log(`User: ${final}`, "user");
                 sendPayload({ type: "command", text: final });
+                stopVoiceRecording();
             }
         };
 

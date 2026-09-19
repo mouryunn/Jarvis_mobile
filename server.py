@@ -82,10 +82,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 result = brain.ask(user_text)
                 reply = result.get("response", "Sir, I have completed the request.")
 
-                # Native Android TTS voice output
-                if settings.is_termux:
-                    termux_api.speak_tts(reply)
-
                 # Send back the response with executed actions
                 await websocket.send_json({
                     "type": "response",

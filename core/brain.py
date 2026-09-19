@@ -207,6 +207,8 @@ class JarvisBrain:
                         f_parts = f_candidates[0].get("content", {}).get("parts", [])
                         reply_text = "".join(p.get("text", "") for p in f_parts)
                         self.conversation_history.append({"role": "model", "parts": f_parts})
+            else:
+                self.conversation_history.append({"role": "model", "parts": [{"text": reply_text}]})
 
             if not reply_text:
                 reply_text = "Action completed, sir."
