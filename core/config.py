@@ -12,7 +12,7 @@ except ImportError:
 @dataclass
 class Settings:
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
-    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     host: str = os.getenv("HOST", "0.0.0.0")
     port: int = int(os.getenv("PORT", "8000"))
     simulation_mode: bool = os.getenv("SIMULATION_MODE", "false").lower() in ("true", "1", "yes")

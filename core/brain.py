@@ -48,21 +48,47 @@ class JarvisBrain:
         if len(self.conversation_history) > 12:
             self.conversation_history = self.conversation_history[-12:]
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
-        headers = {"Content-Type": "application/json"}
-
-        payload = {
-            "system_instruction": {
-                "parts": [{"text": settings.system_prompt}]
-            },
-            "contents": self.conversation_history,
-            "tools": [{"function_declarations": TOOL_DEFINITIONS}]
-        }
+        candidate_models = [
+            self.model_name,
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro"
+        ]
+        # Deduplicate preserving order
+        models_to_try = []
+        for m in candidate_models:
+            if m and m not in models_to_try:
+                models_to_try.append(m)
 
         executed_actions = []
+        resp = None
+
+        for model in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "system_instruction": {
+                    "parts": [{"text": settings.system_prompt}]
+                },
+                "contents": self.conversation_history,
+                "tools": [{"function_declarations": TOOL_DEFINITIONS}]
+            }
+
+            try:
+                r = requests.post(url, headers=headers, json=payload, timeout=25)
+                if r.status_code == 404:
+                    logger.warning(f"Model '{model}' returned 404. Trying next supported model...")
+                    continue
+                resp = r
+                self.model_name = model  # Remember working model
+                break
+            except Exception as e:
+                logger.error(f"Request failed for model {model}: {e}")
+
+        if not resp:
+            return self._fallback_action_handler(user_prompt, "All Gemini models returned 404")
 
         try:
-            resp = requests.post(url, headers=headers, json=payload, timeout=25)
             if resp.status_code != 200:
                 logger.error(f"Gemini API returned status {resp.status_code}: {resp.text}")
                 return self._fallback_action_handler(user_prompt, f"Status {resp.status_code}")
