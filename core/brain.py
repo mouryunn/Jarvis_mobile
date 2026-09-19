@@ -34,12 +34,12 @@ class JarvisBrain:
                 found = []
                 for m in data.get("models", []):
                     methods = m.get("supportedGenerationMethods", [])
-                    if "generateContent" in methods:
+                    if "generateContent" in methods or "bidiGenerateContent" in methods:
                         clean_name = m.get("name", "").replace("models/", "")
                         found.append(clean_name)
                 
-                # Sort to prefer flash models for fast mobile responsiveness
-                found.sort(key=lambda x: (0 if "flash" in x.lower() else 1, 0 if "2" in x else 1))
+                # Sort to prefer flash and Gemini 3 models for fast mobile responsiveness
+                found.sort(key=lambda x: (0 if "flash" in x.lower() else 1, 0 if "3" in x else 1))
                 logger.info(f"Discovered {len(found)} active Gemini models: {found[:5]}")
                 return found
             else:
@@ -82,10 +82,19 @@ class JarvisBrain:
 
         # Build prioritized list of models to try
         candidate_models = []
+        if self.discovered_models:
+            candidate_models.extend(self.discovered_models)
         if self.model_name:
             candidate_models.append(self.model_name)
-        candidate_models.extend(self.discovered_models)
-        candidate_models.extend(["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"])
+        candidate_models.extend([
+            "gemini-3.1-flash-live-preview",
+            "gemini-3-flash-preview",
+            "gemini-2.0-flash-exp",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-pro"
+        ])
 
         # Deduplicate preserving order
         models_to_try = []
