@@ -155,7 +155,20 @@ function speakAloud(text) {
         stopVisualizer();
     };
 
-    window.speechSynthesis.speak(utterance);
+    try {
+        window.speechSynthesis.resume();
+        window.speechSynthesis.speak(utterance);
+    } catch (e) {
+        console.warn("Speech synthesis failed:", e);
+    }
+
+    // Safety timeout to reset HUD state if browser speech synthesis gets stuck
+    setTimeout(() => {
+        if (reactorWrapper.className.includes("speaking")) {
+            setHUDState("ready", "SYSTEM READY");
+            stopVisualizer();
+        }
+    }, Math.max(4000, text.length * 80));
 }
 
 // ── AUTO REDIRECT INSECURE 0.0.0.0 ─────────────────────────────────────────
@@ -224,6 +237,9 @@ function initSpeechRecognition() {
 }
 
 function toggleVoiceRecording() {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.resume();
+    }
     if (isRecording) {
         stopVoiceRecording();
     } else {

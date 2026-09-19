@@ -87,6 +87,8 @@ class JarvisBrain:
         if self.model_name:
             candidate_models.append(self.model_name)
         candidate_models.extend([
+            "gemini-3-flash",
+            "gemini-3-flash-live",
             "gemini-3.1-flash-live-preview",
             "gemini-3-flash-preview",
             "gemini-2.0-flash-exp",
