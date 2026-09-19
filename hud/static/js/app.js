@@ -158,56 +158,69 @@ function speakAloud(text) {
     window.speechSynthesis.speak(utterance);
 }
 
+// ── AUTO REDIRECT INSECURE 0.0.0.0 ─────────────────────────────────────────
+if (window.location.hostname === "0.0.0.0") {
+    window.location.href = window.location.href.replace("0.0.0.0", "localhost");
+}
+
 // ── SPEECH RECOGNITION (VOICE INPUT) ───────────────────────────────────────
 function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        log("SpeechRecognition API not available in this browser. Please use Chrome on Android.", "error");
+        log("Speech recognition not available on insecure origin. Please open http://localhost:8000", "error");
         return;
     }
 
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+    try {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
 
-    recognition.onstart = () => {
-        isRecording = true;
-        micBtn.className = "mic-btn active";
-        micLabel.textContent = "LISTENING...";
-        setHUDState("listening", "LISTENING TO COMMAND...");
-        transcriptBox.innerHTML = `<span class="subtext">Listening...</span>`;
-        startAudioVisualizer();
-    };
+        recognition.onstart = () => {
+            isRecording = true;
+            micBtn.className = "mic-btn active";
+            micLabel.textContent = "LISTENING...";
+            setHUDState("listening", "LISTENING TO COMMAND...");
+            transcriptBox.innerHTML = `<span class="subtext">Listening...</span>`;
+            startAudioVisualizer();
+        };
 
-    recognition.onresult = (event) => {
-        let interim = "";
-        let final = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-                final += event.results[i][0].transcript;
-            } else {
-                interim += event.results[i][0].transcript;
+        recognition.onresult = (event) => {
+            let interim = "";
+            let final = "";
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    final += event.results[i][0].transcript;
+                } else {
+                    interim += event.results[i][0].transcript;
+                }
             }
-        }
-        if (interim) {
-            transcriptBox.innerHTML = `<strong>You:</strong> <em>${interim}</em>`;
-        }
-        if (final) {
-            transcriptBox.innerHTML = `<strong>You:</strong> ${final}`;
-            log(`User: ${final}`, "user");
-            sendPayload({ type: "command", text: final });
-        }
-    };
+            if (interim) {
+                transcriptBox.innerHTML = `<strong>You:</strong> <em>${interim}</em>`;
+            }
+            if (final) {
+                transcriptBox.innerHTML = `<strong>You:</strong> ${final}`;
+                log(`User: ${final}`, "user");
+                sendPayload({ type: "command", text: final });
+            }
+        };
 
-    recognition.onerror = (e) => {
-        console.warn("Speech error:", e.error);
-        stopVoiceRecording();
-    };
+        recognition.onerror = (e) => {
+            console.warn("Speech error:", e.error);
+            log(`Mic error: ${e.error}`, "error");
+            if (e.error === "not-allowed") {
+                transcriptBox.innerHTML = "<span style='color:#ff3366;'>Mic blocked! Tap Chrome lock/shield icon -> Allow Microphone.</span>";
+            }
+            stopVoiceRecording();
+        };
 
-    recognition.onend = () => {
-        stopVoiceRecording();
-    };
+        recognition.onend = () => {
+            stopVoiceRecording();
+        };
+    } catch (err) {
+        console.error("Init speech recognition failed:", err);
+    }
 }
 
 function toggleVoiceRecording() {
@@ -215,10 +228,16 @@ function toggleVoiceRecording() {
         stopVoiceRecording();
     } else {
         if (!recognition) initSpeechRecognition();
+        if (!recognition) {
+            log("Microphone requires http://localhost:8000 (not 0.0.0.0)", "error");
+            transcriptBox.innerHTML = "<span style='color:#ff3366;'>Chrome blocks mic on 0.0.0.0! Open <strong>http://localhost:8000</strong></span>";
+            return;
+        }
         try {
             recognition.start();
         } catch (e) {
             console.error("Start error:", e);
+            log(`Mic start error: ${e.message || e}`, "error");
         }
     }
 }
