@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#030712">
+    <title>JARVIS Mobile // Mark-LIV</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="hud-container">
+        <!-- Top Status Bar -->
+        <header class="hud-header">
+            <div class="header-left">
+                <span class="system-tag">SYS // MK-LIV</span>
+                <span class="connection-badge" id="connBadge">OFFLINE</span>
+            </div>
+            <div class="header-center">
+                <span class="hud-title">JARVIS</span>
+            </div>
+            <div class="header-right">
+                <div class="battery-indicator" id="batteryIndicator">
+                    <span class="battery-icon">⚡</span>
+                    <span id="batteryPct">--%</span>
+                </div>
+                <span class="clock-display" id="clockDisplay">00:00</span>
+            </div>
+        </header>
+
+        <!-- Center Hologram / Arc Reactor -->
+        <main class="hud-main">
+            <div class="reactor-wrapper" id="reactorWrapper">
+                <!-- Multi-layer Rotating Rings -->
+                <div class="ring outer-ring"></div>
+                <div class="ring mid-ring"></div>
+                <div class="ring inner-ring"></div>
+                
+                <!-- Core Pulse Sphere -->
+                <div class="core-sphere" id="coreSphere">
+                    <div class="core-glow"></div>
+                    <div class="core-icon">
+                        <svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Circular Visualizer Canvas -->
+                <canvas id="visualizerCanvas" width="300" height="300"></canvas>
+            </div>
+
+            <!-- State Display -->
+            <div class="status-box">
+                <div class="status-label" id="statusLabel">SYSTEM READY</div>
+                <div class="transcript-box" id="transcriptBox">
+                    <span class="subtext">"Speak, sir. I am listening..."</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Action Chips / Quick Commands -->
+        <div class="quick-actions">
+            <button class="chip" onclick="sendQuickCommand('Turn on flashlight')">⚡ Torch ON</button>
+            <button class="chip" onclick="sendQuickCommand('Turn off flashlight')">🔦 Torch OFF</button>
+            <button class="chip" onclick="sendQuickCommand('Check battery status')">🔋 Battery</button>
+            <button class="chip" onclick="sendQuickCommand('Take a photo with front camera')">📸 Camera</button>
+            <button class="chip" onclick="sendQuickCommand('Capture screen screenshot')">📱 Screen</button>
+            <button class="chip" onclick="sendQuickCommand('Open YouTube')">▶️ YouTube</button>
+        </div>
+
+        <!-- Action Feedback Log -->
+        <div class="hud-terminal" id="hudTerminal">
+            <div class="terminal-header">
+                <span>// ACTIVITY LOG</span>
+                <button class="clear-btn" onclick="clearTerminal()">CLEAR</button>
+            </div>
+            <div class="terminal-body" id="terminalBody">
+                <div class="log-entry system">Initialization complete. Mark-LIV mobile online.</div>
+            </div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <footer class="hud-footer">
+            <div class="input-bar">
+                <input type="text" id="textInput" placeholder="Command JARVIS..." autocomplete="off">
+                <button class="send-btn" id="sendBtn" onclick="sendTextCommand()">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="voice-controls">
+                <button class="mic-btn" id="micBtn" onclick="toggleVoiceRecording()">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" id="micIcon">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                </button>
+                <div class="mic-label" id="micLabel">PUSH TO SPEAK</div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
