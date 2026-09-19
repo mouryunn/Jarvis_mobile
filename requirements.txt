@@ -12,4 +12,3 @@ rich>=13.7.0
 # Network & Utilities
 requests>=2.31.0
 python-dotenv>=1.0.1
-duckduckgo-search>=6.0.0
